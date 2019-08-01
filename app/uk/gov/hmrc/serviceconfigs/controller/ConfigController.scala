@@ -61,4 +61,10 @@ class ConfigController @Inject()(configService: ConfigService,
     }
   }
 
+  def serviceConfigKeysByValue(environmentName: String) = Action.async { implicit request =>
+    configService.serviceConfigKeysByValue(environmentName).map { k =>
+      Ok(Json.toJson(k))
+    }
+  }
+
 }

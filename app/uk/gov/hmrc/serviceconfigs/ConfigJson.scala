@@ -22,4 +22,5 @@ import uk.gov.hmrc.serviceconfigs.service.ConfigService._
 trait ConfigJson {
   implicit val configSourceEntriesWrites = Json.writes[ConfigSourceEntries]
   implicit val configSourceValueWrites = Json.writes[ConfigSourceValue]
+  implicit val serviceConfigKeyWrites = Json.writes[ServiceConfigKey]
 }
