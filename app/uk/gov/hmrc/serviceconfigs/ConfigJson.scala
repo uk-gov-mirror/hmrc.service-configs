@@ -23,4 +23,5 @@ trait ConfigJson {
   implicit val configSourceEntriesWrites = Json.writes[ConfigSourceEntries]
   implicit val configSourceValueWrites = Json.writes[ConfigSourceValue]
   implicit val serviceConfigKeyWrites = Json.writes[ServiceConfigKey]
+  implicit val valueDetailsWrites = Json.writes[ValueDetails]
 }

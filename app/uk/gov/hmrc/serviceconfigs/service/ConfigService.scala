@@ -82,7 +82,7 @@ class ConfigService @Inject()(configConnector: ConfigConnector,
   // TODO consideration for deprecated naming? e.g. application.secret -> play.crypto.secret -> play.http.secret.key
   def configByKey(serviceName: String)(implicit hc: HeaderCarrier): Future[ConfigByKey] = {
     environments.toIterable.foldLeftM[Future, ConfigByKey](Map.empty) { case (map, e) =>
-      configSourceEntries(e, serviceName).map { cses =>
+      val x = configSourceEntries(e, serviceName).map { cses =>
         cses.foldLeft(map) { case (subMap, cse) =>
           subMap ++ cse.entries.map { case (key, value) =>
             val envMap = subMap.getOrElse(key, Map.empty)
@@ -91,26 +91,37 @@ class ConfigService @Inject()(configConnector: ConfigConnector,
           }
         }
       }
+        x
       // sort by keys
     }.map { map =>
       scala.collection.immutable.ListMap(map.toSeq.sortBy(_._1): _*)
     }
   }
 
-  def serviceConfigKeysByValue(environmentName: String)(implicit hc: HeaderCarrier): Future[Map[String, scala.Seq[(KeyName, String)]]] =
-    teamsAndRepositoriesConnector.allServices.flatMap(services => {
-      val env = Environment("qa", deployedConfigSources)
-      val entriesF = services.take(50).map(s =>
-        configSourceEntries(env, s.name).map { cses => cses.map(cse => s.name -> cse) })
+  case class ValuePrecedence(value: String, precedence: Int) {
+    def applyIfGreater(other: Option[ValuePrecedence]): ValuePrecedence = {
+      val vp = other.getOrElse(this)
+      if (vp.precedence > this.precedence) vp else this
+    }
+  }
 
-      val f = Future.sequence(entriesF).map(_.flatten)
-      f.map(h =>
-        h.foldLeft[Map[String, Seq[(KeyName, String)]]](Map.empty) { case (map, (serviceName, cse)) =>
-          map ++ cse.entries.map { case (key, value) =>
-            val valueSources = map.getOrElse(value, Seq())
-            value -> (valueSources :+ (key -> serviceName))
+  def serviceConfigKeysByValue(environmentName: String)(implicit hc: HeaderCarrier): Future[Seq[ValueDetails]] =
+    teamsAndRepositoriesConnector.allServices.flatMap(services => {
+      val env = Environment("production", deployedConfigSources)
+      val detailsF = services.map(s =>
+        configSourceEntries(env, s.name).map { cses =>
+          s.name -> cses.foldLeft[Map[String, ValuePrecedence]](Map.empty) { case (map, cse) =>
+            map ++ cse.entries.map { case (key, value) =>
+              key -> ValuePrecedence(value, cse.precedence).applyIfGreater(map.get(key))
+            }
           }
         })
+
+      Future.sequence(detailsF).map { details =>
+        details.flatMap { case (serviceName, entry) =>
+          entry.map { case (key, vp) => ValueDetails(vp.value, key, serviceName, env.name) }
+        }
+      }
     })
 }
 
@@ -129,6 +140,8 @@ object ConfigService {
   case class Environment(name: String, configSources: Seq[ConfigSource])
 
   case class ServiceConfigKey(keyName: KeyName, serviceName: String)
+
+  case class ValueDetails(value: String, key: String, service: String, environment: String)
 
   sealed trait ConfigSource {
     def name: String
