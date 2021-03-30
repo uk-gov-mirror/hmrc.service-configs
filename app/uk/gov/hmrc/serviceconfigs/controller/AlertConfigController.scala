@@ -14,31 +14,42 @@
  * limitations under the License.
  */
 
-//package uk.gov.hmrc.serviceconfigs.controller
-//
-//import play.api.mvc.{Action, AnyContent, ControllerComponents}
-//import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-//import uk.gov.hmrc.serviceconfigs.persistence.{AlertConfigRepository, AlertHandlerRepository}
-//
-//import javax.inject.{Inject, Singleton}
-//import scala.concurrent.ExecutionContext
-//
-//@Singleton
-//class AlertConfigController @Inject() ( alertConfigRepository: AlertConfigRepository,
-//                                        alertHandlerRepository: AlertHandlerRepository,
-//                                        cc: ControllerComponents
-//                                      ) (implicit ec : ExecutionContext) extends BackendController(cc){
-//
-//  def getAllAlertConfig(): Action[AnyContent] =
+package uk.gov.hmrc.serviceconfigs.controller
+
+import play.api.libs.json.{Json, Writes}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.serviceconfigs.model
+import uk.gov.hmrc.serviceconfigs.model.AlertEnvironmentHandler
+import uk.gov.hmrc.serviceconfigs.persistence.AlertEnvironmentHandlerRepository
+import uk.gov.hmrc.serviceconfigs.service.AlertConfigService
+
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
+
+@Singleton
+class AlertConfigController @Inject()(alertConfigService: AlertConfigService,
+                                      cc: ControllerComponents)
+                                     (implicit ec: ExecutionContext)
+  extends BackendController(cc){
+
+  def getAlertConfigs(): Action[AnyContent] = {
+    implicit val writes: Writes[AlertEnvironmentHandler] = AlertEnvironmentHandler.mongoFormats
+    Action.async {
+      for {
+        configs <- alertConfigService.findConfigs
+        result = Ok(Json.toJson(configs))
+      } yield result
+    }
+  }
+
+//  def getAlertConfigForService(serviceName: String): Action[AnyContent] = {
 //    Action.async {
-//      alertConfigRepository
+//      for {
+//        config <- alertConfigService.findOneConfig(serviceName)
+//        result = config.map(c => Ok(Json.toJson(c)(AlertEnvironmentHandler.formats))).getOrElse(NotFound)
+//      } yield result
 //    }
-//
-//}
-//
-//
-//
-//
-//API:
-//  AlertConfigController(alertConfigRepsitory: AlertConfigRepsitory) <- Routes /a/b
-//   def GetAll -> alertConfigRepsitory.getAlertConfig
+//  }
+
+}

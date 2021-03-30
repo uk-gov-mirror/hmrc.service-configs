@@ -16,13 +16,9 @@
 
 package uk.gov.hmrc.serviceconfigs.model
 
-import akka.http.scaladsl.model.DateTime
-import play.api.libs.json.{Format, Json, OFormat}
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
-import uk.gov.hmrc.serviceconfigs.connector.JenkinsConnector.{Handler, SeverityType}
-import uk.gov.hmrc.serviceconfigs.persistence.model.{MongoFrontendRoute, MongoShutterSwitch}
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{Format, Json, OFormat, Writes, __}
 
-import java.time.LocalDateTime
 
 
 case class AlertEnvironmentHandler(
@@ -32,20 +28,26 @@ case class AlertEnvironmentHandler(
                                   integration: Seq[String]
                                   )
 
-case class LastJobNumber(jobNumber: Int)
-
-
 object AlertEnvironmentHandler {
-  val formats: Format[AlertEnvironmentHandler] =
-    Json.format[AlertEnvironmentHandler]
+  implicit val mongoFormats: Format[AlertEnvironmentHandler] =
+    ((__ \ "serviceName").format[String]
+      ~ (__ \ "handlerNames").format[Seq[String]]
+      ~ (__ \ "production").format[Seq[String]]
+      ~ (__ \ "integration").format[Seq[String]])(AlertEnvironmentHandler.apply, unlift(AlertEnvironmentHandler.unapply))
+
+//  implicit val writes: Writes[AlertEnvironmentHandler] =
+//    ((__ \ "serviceName").write[String]
+//      ~ (__ \ "handlerNames").write[Seq[String]]
+//      ~ (__ \ "production").write[Seq[String]]
+//      ~ (__ \ "integration").write[Seq[String]])(unlift(AlertEnvironmentHandler.unapply))
 }
+
+case class LastJobNumber(jobNumber: Int)
 
 object LastJobNumber {
   val formats: Format[LastJobNumber] =
     Json.format[LastJobNumber]
 }
-
-
 
 
 //serviceName: "",

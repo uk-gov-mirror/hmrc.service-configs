@@ -16,147 +16,104 @@
 
 package uk.gov.hmrc.serviceconfigs.connector
 
-import play.api.libs.json.{Format, Json, OFormat}
+import com.google.common.io.BaseEncoding
+import play.api.libs.json._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.serviceconfigs.config.JenkinsConfig
+
+import javax.inject.Inject
+import scala.concurrent.{ExecutionContext, Future}
 
 
-import java.time.LocalDateTime
+class JenkinsConnector @Inject() (config: JenkinsConfig, http: HttpClient) {
 
-class JenkinsConnector {
+//  def getZip(baseUrl: String)(implicit ec: ExecutionContext): Future[Option[???]] = {
+//
+//    // Stops Server Side Request Forgery
+//    assert(baseUrl.startsWith(config.jenkinsHost))
+//
+//    val authorizationHeader =
+//      s"Basic ${BaseEncoding.base64().encode(s"${config.username}:${config.token}".getBytes("UTF-8")}
+//
+//
+//    implicit val hc: HeaderCarrier = HeaderCarrier()
+//    val url                        = url"${baseUrl} ???
+//
+//    http
+//      .GET[Option[???]](
+//        url = url,
+//        headers = Seq("Authorization" -> authorizationHeader)
+//      )
 
 }
 
 object JenkinsConnector {
 
-  sealed trait SeverityType
+//  sealed trait SeverityType
+//
+//  object SeverityType {
+//    case object Ok extends SeverityType
+//    case object Warning extends SeverityType
+//    case object Critical extends SeverityType
+//  }
 
-  object SeverityType {
-    case object Ok extends SeverityType
-    case object Warning extends SeverityType
-    case object Critical extends SeverityType
-  }
-
-  case class Threshold(
-                        count: Long,
-                        severity: String
-                      )
-
-  case class HttpThreshold(
-                            count: Long,
-                            httpStatus: String,
-                            severity: SeverityType
-                          )
-
-  case class LogMessageThresholds(
-                                   count: Int,
-                                   lessThanMode: Boolean,
-                                   message: String
-                                 )
-
-  case class PercentageSplitThreshold(
-                                       absoluteThreshold: Int,
-                                       crossOver: Int,
-                                       errorFilter: String,
-                                       excludesSpikes: Int,
-                                       hysteresis: Double,
-                                       percentageThreshold: Double,
-                                       severity: String
-                                     )
+//  case class Threshold(
+//                        count: Long,
+//                        severity: String
+//                      )
+//
+//  case class HttpThreshold(
+//                            count: Long,
+//                            httpStatus: String,
+//                            severity: SeverityType
+//                          )
+//
+//  case class LogMessageThresholds(
+//                                   count: Int,
+//                                   lessThanMode: Boolean,
+//                                   message: String
+//                                 )
+//
+//  case class PercentageSplitThreshold(
+//                                       absoluteThreshold: Int,
+//                                       crossOver: Int,
+//                                       errorFilter: String,
+//                                       excludesSpikes: Int,
+//                                       hysteresis: Double,
+//                                       percentageThreshold: Double,
+//                                       severity: String
+//                                     )
 
   case class AlertConfig(
                           app: String,
                           handlers: Seq[String],
                           exceptionThreshold: Int,
-                          threshold5xx: Seq[Threshold],
+                          threshold5xx: Seq[String],
                           percentThreshold5xx: Double,
                           containerKillThreshold: Int,
-                          httpStatusThresholds: Seq[Threshold],
-                          totalHttpRequestThresholds: Seq[HttpThreshold],
-                          logMessageThresholds: Seq[LogMessageThresholds],
+                          httpStatusThresholds: Seq[String],
+                          totalHttpRequestThresholds: Seq[String],
+                          logMessageThresholds: Seq[String],
                           averageCpuThreshold: Long,
-                          absolutePercentageSplitThreshold: Seq[PercentageSplitThreshold]
+                          absolutePercentageSplitThreshold: Seq[String]
                         )
+
+  object AlertConfig {
+    implicit val formats: OFormat[AlertConfig] =
+      Json.format[AlertConfig]
+  }
 
   case class Handler(
                       name: String,
                       command: String,
                       filter: String,
-                      severities: Seq[SeverityType],
+                      severities: Seq[String],
                       `type`: String
                     )
 
-
-  object AlertConfig {
-    import SeverityType.{Ok, Warning, Critical}
-    implicit val okSeverityTypeFormat: Format[Ok] = Json.reads[Ok]
-    implicit val warningSeverityTypeFormat: Format[SeverityType.Warning] = Json.reads[SeverityType.Warning]
-    implicit val criticalSeverityTypeFormat: Format[SeverityType.Critical] = Json.reads[SeverityType.Critical]
-
-    implicit val severityTypeFormat: Format[SeverityType] =
-      Json.format[SeverityType]
-
-    implicit val alertConfigFormat: Format[Threshold] =
-      Json.format[Threshold]
-
-    implicit val httpThresholdFormat: Format[HttpThreshold] =
-      Json.format[HttpThreshold]
-
-    implicit val logMessageThresholdsFormat: Format[LogMessageThresholds] =
-      Json.format[LogMessageThresholds]
-
-    implicit val percentageSplitThreshold: Format[PercentageSplitThreshold] =
-      Json.format[PercentageSplitThreshold]
-
-    implicit val formats: OFormat[AlertConfig] =
-      Json.using[Json.WithDefaultValues].format[AlertConfig]
-  }
-
   object Handler {
-    implicit val severityTypeFormat: Format[SeverityType] =
-      Json.format[SeverityType]
-
     implicit val formats: OFormat[Handler] =
       Json.format[Handler]
   }
-}
 
-
-
-
-
-
-
-/////////////////////
-sealed trait IndicatorType
-
-case object ReadMeIndicatorType extends IndicatorType {
-  override def toString: String = "read-me-indicator"
-}
-
-case object LeakDetectionIndicatorType extends IndicatorType {
-  override def toString: String = "leak-detection-indicator"
-}
-
-case object BobbyRuleIndicatorType extends IndicatorType {
-  override def toString: String = "bobby-rule-indicator"
-}
-
-case object BuildStabilityIndicatorType extends IndicatorType {
-  override def toString: String = "build-stability-indicator"
-}
-
-object IndicatorType {
-
-  private val indicatorTypes =
-    Set(ReadMeIndicatorType, LeakDetectionIndicatorType, BobbyRuleIndicatorType, BuildStabilityIndicatorType)
-
-  def apply(value: String): Option[IndicatorType] = indicatorTypes.find(_.toString == value)
-
-  val format: Format[IndicatorType] = new Format[IndicatorType] {
-    override def reads(json: JsValue): JsResult[IndicatorType] =
-      json.validate[String].flatMap { str =>
-        IndicatorType(str).fold[JsResult[IndicatorType]](JsError(s"Invalid Indicator: $str"))(JsSuccess(_))
-      }
-
-    override def writes(o: IndicatorType): JsValue = JsString(o.toString)
-  }
 }

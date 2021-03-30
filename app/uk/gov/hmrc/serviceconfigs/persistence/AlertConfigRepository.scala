@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.serviceconfigs.persistence
 
-import com.mongodb.client.model.Indexes
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.serviceconfigs.model.{AlertEnvironmentHandler, LastJobNumber}
-import uk.gov.hmrc.serviceconfigs.persistence.model.MongoFrontendRoute
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes._
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,9 +33,9 @@ class AlertEnvironmentHandlerRepository @Inject()(
                                        ) extends PlayMongoRepository(
   mongoComponent = mongoComponent,
   collectionName = "alertEnvironmentHandlers",
-  domainFormat   = AlertEnvironmentHandler.formats,
+  domainFormat   = AlertEnvironmentHandler.mongoFormats,
   indexes        = Seq(
-    IndexModel(Indexes.hashed("serviceName"), IndexOptions().background(true).name("serviceNameIdx"))
+    IndexModel(hashed("serviceName"), IndexOptions().background(true).name("serviceNameIdx"))
   )
 ) {
 
@@ -48,32 +48,38 @@ class AlertEnvironmentHandlerRepository @Inject()(
       .map(_ => ())
 
 
-  def getAll(): Future[Seq[AlertEnvironmentHandler]] =
+  def findOne(serviceName: String): Future[Option[AlertEnvironmentHandler]] =
+    collection
+      .find(equal("serviceName", serviceName))
+      .headOption()
+
+
+  def findAll(): Future[Seq[AlertEnvironmentHandler]] =
     collection.find().toFuture().map(_.toList)
 }
 
-@Singleton
-class AlertJobNumberRepository @Inject()(
-                                       mongoComponent: MongoComponent
-                                     )(implicit ec: ExecutionContext
-                                     ) extends PlayMongoRepository(
-  mongoComponent = mongoComponent,
-  collectionName = "lastJobNumber",
-  domainFormat   = LastJobNumber.formats,
-  indexes        = Seq(
-    IndexModel(Indexes.hashed("jobNumber"), IndexOptions().background(true).name("jobNumberIdx"))
-  )) {
-
-  def insert(lastJobNumber: LastJobNumber): Future[Unit] =
-    collection.
-      insertOne(
-        lastJobNumber
-      )
-      .toFuture()
-      .map(_ => ())
-
-    def getJobNumber(): Future[LastJobNumber] =
-      collection.find.toFuture().map(_.head)
-  }
+//@Singleton
+//class AlertJobNumberRepository @Inject()(
+//                                       mongoComponent: MongoComponent
+//                                     )(implicit ec: ExecutionContext
+//                                     ) extends PlayMongoRepository(
+//  mongoComponent = mongoComponent,
+//  collectionName = "lastJobNumber",
+//  domainFormat   = LastJobNumber.formats,
+//  indexes        = Seq(
+//    IndexModel(Indexes.hashed("jobNumber"), IndexOptions().background(true).name("jobNumberIdx"))
+//  )) {
+//
+//  def insert(lastJobNumber: LastJobNumber): Future[Unit] =
+//    collection.
+//      insertOne(
+//        lastJobNumber
+//      )
+//      .toFuture()
+//      .map(_ => ())
+//
+//    def getJobNumber(): Future[LastJobNumber] =
+//      collection.find.toFuture().map(_.head)
+//  }
 
 
