@@ -43,13 +43,13 @@ class AlertConfigController @Inject()(alertConfigService: AlertConfigService,
     }
   }
 
-//  def getAlertConfigForService(serviceName: String): Action[AnyContent] = {
-//    Action.async {
-//      for {
-//        config <- alertConfigService.findOneConfig(serviceName)
-//        result = config.map(c => Ok(Json.toJson(c)(AlertEnvironmentHandler.formats))).getOrElse(NotFound)
-//      } yield result
-//    }
-//  }
+  def getAlertConfigForService(serviceName: String): Action[AnyContent] = {
+    Action.async {
+      for {
+        config <- alertConfigService.findOneConfig(serviceName)
+        result = config.map(c => Ok(Json.toJson(c)(AlertEnvironmentHandler.mongoFormats))).getOrElse(NotFound)
+      } yield result
+    }
+  }
 
 }

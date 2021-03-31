@@ -34,12 +34,6 @@ object AlertEnvironmentHandler {
       ~ (__ \ "handlerNames").format[Seq[String]]
       ~ (__ \ "production").format[Seq[String]]
       ~ (__ \ "integration").format[Seq[String]])(AlertEnvironmentHandler.apply, unlift(AlertEnvironmentHandler.unapply))
-
-//  implicit val writes: Writes[AlertEnvironmentHandler] =
-//    ((__ \ "serviceName").write[String]
-//      ~ (__ \ "handlerNames").write[Seq[String]]
-//      ~ (__ \ "production").write[Seq[String]]
-//      ~ (__ \ "integration").write[Seq[String]])(unlift(AlertEnvironmentHandler.unapply))
 }
 
 case class LastJobNumber(jobNumber: Int)
