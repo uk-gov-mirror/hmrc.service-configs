@@ -72,10 +72,12 @@ class AlertConfigIntegrationSpec
 
       testData.foreach(repository.insert)
 
-      val expectedResult = "bob"
+      val expectedResult = "bobby"
 
       eventually {
-        val response = ws.url(s"http://localhost$port/service-configs/alert-configs").get.futureValue
+        val response = ws.url(s"http://localhost:$port/service-configs/alert-configs").get.futureValue
+
+        response.status shouldBe 200
         response.body should include(expectedResult)
       }
     }
