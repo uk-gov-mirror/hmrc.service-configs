@@ -16,36 +16,68 @@
 
 package uk.gov.hmrc.serviceconfigs.connector
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.StreamConverters
 import com.google.common.io.BaseEncoding
 import play.api.libs.json._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import play.api.libs.ws.{WSAuthScheme, WSClient}
 import uk.gov.hmrc.serviceconfigs.config.JenkinsConfig
 
+import java.io.InputStream
 import javax.inject.Inject
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class JenkinsConnector @Inject() (config: JenkinsConfig, http: HttpClient) {
 
-//  def getZip(baseUrl: String)(implicit ec: ExecutionContext): Future[Option[???]] = {
-//
-//    // Stops Server Side Request Forgery
-//    assert(baseUrl.startsWith(config.jenkinsHost))
-//
-//    val authorizationHeader =
-//      s"Basic ${BaseEncoding.base64().encode(s"${config.username}:${config.token}".getBytes("UTF-8")}
-//
-//
-//    implicit val hc: HeaderCarrier = HeaderCarrier()
-//    val url                        = url"${baseUrl} ???
-//
-//    http
-//      .GET[Option[???]](
-//        url = url,
-//        headers = Seq("Authorization" -> authorizationHeader)
-//      )
+class JenkinsConnector @Inject() (config: JenkinsConfig, ws: WSClient) {
 
+  def getZip(baseUrl: String)(implicit ec: ExecutionContext,
+                              materializer: Materializer): Future[InputStream] = {
+
+
+    ws
+      .url("https://orchestrator.tools.production.tax.service.gov.uk/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip")
+      .withMethod("GET")
+      .withAuth(config.username, config.token, WSAuthScheme.BASIC)
+      .withRequestTimeout(Duration.Inf)
+      .stream
+      .map(_.bodyAsSource.async.runWith(StreamConverters.asInputStream(readTimeout = 20.seconds)))
+
+
+  }
 }
+
+  // https://orchestrator.tools.production.tax.service.gov.uk/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip
+
+
+//  @Singleton
+//  class GzippedResourceConnector @Inject()(
+//                                            ws: WSClient
+//                                          )(implicit
+//                                            ec          : ExecutionContext,
+//                                            materializer: Materializer
+//                                          ) extends Logging {
+//
+//    /** @param resourceUrl the url pointing to gzipped resource
+//      * @return an uncompressed InputStream, which will close when it reaches the end
+//      */
+//    def openGzippedResource(resourceUrl: String): Future[InputStream] = {
+//      logger.debug(s"downloading $resourceUrl")
+//      ws
+//        .url(resourceUrl)
+//        .withMethod("GET")
+//        .withRequestTimeout(Duration.Inf)
+//        .stream
+//        .map(
+//          _
+//            .bodyAsSource
+//            .async
+//            .via(Compression.gunzip())
+//            .runWith(StreamConverters.asInputStream(readTimeout = 20.seconds))
+//        )
+//    }
+//  }
 
 object JenkinsConnector {
 
@@ -84,36 +116,6 @@ object JenkinsConnector {
 //                                       severity: String
 //                                     )
 
-  case class AlertConfig(
-                          app: String,
-                          handlers: Seq[String],
-                          exceptionThreshold: Int,
-                          threshold5xx: Seq[String],
-                          percentThreshold5xx: Double,
-                          containerKillThreshold: Int,
-                          httpStatusThresholds: Seq[String],
-                          totalHttpRequestThresholds: Seq[String],
-                          logMessageThresholds: Seq[String],
-                          averageCpuThreshold: Long,
-                          absolutePercentageSplitThreshold: Seq[String]
-                        )
 
-  object AlertConfig {
-    implicit val formats: OFormat[AlertConfig] =
-      Json.format[AlertConfig]
-  }
-
-  case class Handler(
-                      name: String,
-                      command: String,
-                      filter: String,
-                      severities: Seq[String],
-                      `type`: String
-                    )
-
-  object Handler {
-    implicit val formats: OFormat[Handler] =
-      Json.format[Handler]
-  }
 
 }

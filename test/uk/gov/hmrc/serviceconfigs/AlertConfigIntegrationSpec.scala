@@ -67,19 +67,63 @@ class AlertConfigIntegrationSpec
 
     "return correct json when getAlertConfigs receives a get request" in {
 
-      val testData = Seq(AlertEnvironmentHandler("testNameOne", Seq("test1", "test2", "test3"),Seq("test"), Seq("test")),
-        AlertEnvironmentHandler("testNameTwo", Seq("testA", "testB", "testC"),Seq("test"), Seq("test")))
+      val testData = Seq(AlertEnvironmentHandler("testNameTwo", true),
+        AlertEnvironmentHandler("testNameOne", true))
 
       testData.foreach(repository.insert)
 
-      val expectedResult = "bobby"
+      val expectedResultOne = """{"serviceName":"testNameOne","production":true}"""
+      val expectedResultTwo = """{"serviceName":"testNameTwo","production":true}"""
+
 
       eventually {
         val response = ws.url(s"http://localhost:$port/service-configs/alert-configs").get.futureValue
 
         response.status shouldBe 200
+        response.body should include(expectedResultOne)
+        response.body should include(expectedResultTwo)
+      }
+    }
+
+    "return correct json when getAlertConfigForService receives a get request" in {
+
+      val testData = Seq(AlertEnvironmentHandler("testNameOne", true),
+        AlertEnvironmentHandler("testNameTwo", true))
+
+      testData.foreach(repository.insert)
+
+      val expectedResult = """{"serviceName":"testNameOne","production":true}"""
+
+      eventually {
+        val response =  ws.url(s"http://localhost:$port/service-configs/alert-configs/testNameOne").get.futureValue
+
+        response.status shouldBe 200
         response.body should include(expectedResult)
       }
+
+    }
+
+    "return NotFound when getAlertConfigForService receives a get request for a non-existing service" in {
+
+      val testData = Seq(AlertEnvironmentHandler("testNameOne", true),
+        AlertEnvironmentHandler("testNameTwo", true))
+
+      testData.foreach(repository.insert)
+
+      eventually {
+        val response =  ws.url(s"http://localhost:$port/service-configs/alert-configs/testNameNonExisting").get.futureValue
+
+        response.status shouldBe 404
+        response.body shouldBe ""
+      }
+    }
+
+    "return NotFound when getAlertConfigs receives a get request and the repository has no data" in {
+
+      val response =  ws.url(s"http://localhost:$port/service-configs/alert-configs/testNameOne").get.futureValue
+
+      response.status shouldBe 404
+      response.body shouldBe ""
     }
 
   }

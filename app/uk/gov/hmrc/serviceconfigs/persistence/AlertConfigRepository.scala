@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.serviceconfigs.persistence
 
+import com.mongodb.client.model.ReplaceOptions
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.serviceconfigs.model.{AlertEnvironmentHandler, LastJobNumber}
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{equal, exists}
 import org.mongodb.scala.model.Indexes._
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 
@@ -58,28 +59,29 @@ class AlertEnvironmentHandlerRepository @Inject()(
     collection.find().toFuture().map(_.toList)
 }
 
-//@Singleton
-//class AlertJobNumberRepository @Inject()(
-//                                       mongoComponent: MongoComponent
-//                                     )(implicit ec: ExecutionContext
-//                                     ) extends PlayMongoRepository(
-//  mongoComponent = mongoComponent,
-//  collectionName = "lastJobNumber",
-//  domainFormat   = LastJobNumber.formats,
-//  indexes        = Seq(
-//    IndexModel(Indexes.hashed("jobNumber"), IndexOptions().background(true).name("jobNumberIdx"))
-//  )) {
-//
-//  def insert(lastJobNumber: LastJobNumber): Future[Unit] =
-//    collection.
-//      insertOne(
-//        lastJobNumber
-//      )
-//      .toFuture()
-//      .map(_ => ())
-//
-//    def getJobNumber(): Future[LastJobNumber] =
-//      collection.find.toFuture().map(_.head)
-//  }
+@Singleton
+class AlertJobNumberRepository @Inject()(
+                                       mongoComponent: MongoComponent
+                                     )(implicit ec: ExecutionContext
+                                     ) extends PlayMongoRepository(
+  mongoComponent = mongoComponent,
+  collectionName = "lastJobNumber",
+  domainFormat   = LastJobNumber.formats,
+  indexes        = Seq(
+    IndexModel(hashed("jobNumber"), IndexOptions().background(true).name("jobNumberIdx"))
+  )) {
 
+  def update(lastJobNumber: LastJobNumber): Future[Unit] =
+    collection
+      .replaceOne(
+        filter      = exists("jobNumber"),
+        replacement = lastJobNumber,
+        options     = new ReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => ())
 
+    def findOne(): Future[Option[LastJobNumber]] =
+      collection.find.toFuture().map(_.headOption)
+
+  }

@@ -23,17 +23,13 @@ import play.api.libs.json.{Format, Json, OFormat, Writes, __}
 
 case class AlertEnvironmentHandler(
                                   serviceName: String,
-                                  handlerNames: Seq[String],
-                                  production: Seq[String],
-                                  integration: Seq[String]
+                                  production: Boolean
                                   )
 
 object AlertEnvironmentHandler {
   implicit val mongoFormats: Format[AlertEnvironmentHandler] =
     ((__ \ "serviceName").format[String]
-      ~ (__ \ "handlerNames").format[Seq[String]]
-      ~ (__ \ "production").format[Seq[String]]
-      ~ (__ \ "integration").format[Seq[String]])(AlertEnvironmentHandler.apply, unlift(AlertEnvironmentHandler.unapply))
+      ~ (__ \ "production").format[Boolean])(AlertEnvironmentHandler.apply, unlift(AlertEnvironmentHandler.unapply))
 }
 
 case class LastJobNumber(jobNumber: Int)
