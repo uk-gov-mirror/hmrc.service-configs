@@ -16,61 +16,85 @@
 
 package uk.gov.hmrc.serviceconfigs.service
 
+import akka.stream.Materializer
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.serviceconfigs.connector.JenkinsConnector
-import uk.gov.hmrc.serviceconfigs.model.AlertEnvironmentHandler
+import uk.gov.hmrc.serviceconfigs.model.{AlertEnvironmentHandler, LastJobNumber}
 import uk.gov.hmrc.serviceconfigs.persistence.{AlertEnvironmentHandlerRepository, AlertJobNumberRepository}
+import uk.gov.hmrc.serviceconfigs.service.AlertConfigSchedulerService.{processSensuConfig, processZip}
 
 import java.io.{FileInputStream, FilterInputStream, InputStream}
 import java.util.zip.{ZipEntry, ZipInputStream}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
+
 
 @Singleton
 class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: AlertEnvironmentHandlerRepository,
                                              alertJobNumberRepository: AlertJobNumberRepository,
-                                             jenkinsConnector: JenkinsConnector)(implicit val ec : ExecutionContext) {
+                                             jenkinsConnector: JenkinsConnector)(implicit val ec : ExecutionContext,
+                                                                                 materializer: Materializer) {
 
-  def updateConfigs() = {
+  def updateConfigs(): Future[Unit] = {
+
+    (for {
+      jenkinsJobNumber  <- jenkinsConnector.getLatestJob().map(x => x.getOrElse(0))
+      lastJobNumber     <- alertJobNumberRepository.findOne().map(x => x.getOrElse(LastJobNumber(0)).jobNumber)
+      maybeJobNumber    =  if (jenkinsJobNumber > lastJobNumber) Option(jenkinsJobNumber) else None
+    } yield maybeJobNumber).map {
+      case Some(value) =>
+        for {
+          zip           <- jenkinsConnector.getZip("url")
+          sensuConfig   = processZip(zip)
+          alertHandlers = processSensuConfig(sensuConfig)
+        } yield alertHandlers.foreach(alertEnvironmentHandlerRepository.insert)
+
+        alertJobNumberRepository.update(value)
+
+      case None => Future.successful(())
+    }
+  }
+
+
+
+
     /*
       lastJobNumber [None || INT] :: alertJobNumberRepository -> get last Job Number
       jenkins -> get the latest Job Number
 
       maybe (lastJobNumber is empty) OR ( latest Job Number > last Job Number )
       DO
-        configStream [MemStream] :: jenkins -> get config stream (by latestJobNumber)
+              configStream [MemStream] :: jenkins -> get config stream (by latestJobNumber)
 
-        iterate json config files
-        DO
-          getFile configFile -> AlertEnvironmentHandler()
-          with defaults
-
-        iterate json handler files
-          DO
-            iterate environment files
+              iterate json config files
               DO
-                getFile environmentFile ->
+                getFile configFile -> AlertEnvironmentHandler()
+                with defaults
 
-                if (AlertConfig.handlers.contains(Handler.name))
-                  DO
-                  if Handler.command is enabled -> AlertEnvironmentHandler(enabled)
-                  DO
-                    UpdateInMemoryVariables
-                    Insert to Mongo
+              iterate json handler files
+                DO
+                  iterate environment files
+                    DO
+                      getFile environmentFile ->
 
-       DO
-        Update Job Number with latest
-        ...
-        Configs
-        1. Not Set
-        2. Enabled
-        3. Disabled
+                      if (AlertConfig.handlers.contains(Handler.name))
+                        DO
+                        if Handler.command is enabled -> AlertEnvironmentHandler(enabled)
+                        DO
+                          UpdateInMemoryVariables
+                          Insert to Mongo
+
+             DO
+              Update Job Number with latest
+              ...
+              Configs
 
       NOT
         -- end .
      */
+
+    Future.successful(()=>())
   }
 
 }
@@ -86,7 +110,6 @@ object AlertConfig {
 }
 
 case class Handler(
-                    //name: String,
                     command: String
                   )
 
@@ -100,7 +123,7 @@ case class SensuConfig(
                       productionHandler: Map[String, Handler] = Map.empty
                       )
 
-object AlertConfigSchedulerService extends Logging {
+object AlertConfigSchedulerService {
 
   class NonClosableInputStream(inputStream: ZipInputStream) extends FilterInputStream(inputStream) {
     override def close(): Unit = {
@@ -152,8 +175,9 @@ object AlertConfigSchedulerService extends Logging {
   }
 
 
-  //val fis = new FileInputStream("/Users/samhmrcdigital/Downloads/output.zip")
-  //println(processSensuConfig(processZip(fis)))
+  val fis = new FileInputStream("/Users/samhmrcdigital/Downloads/sensuConfig.zip")
+  println(SensuConfig)
+  println(processSensuConfig(processZip(fis)))
 }
 
 

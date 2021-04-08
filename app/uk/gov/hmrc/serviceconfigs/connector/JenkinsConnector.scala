@@ -46,6 +46,8 @@ class JenkinsConnector @Inject() (config: JenkinsConfig, ws: WSClient) {
 
 
   }
+
+  def getLatestJob(): Future[Option[Int]] = ???
 }
 
   // https://orchestrator.tools.production.tax.service.gov.uk/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip

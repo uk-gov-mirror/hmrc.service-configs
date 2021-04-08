@@ -71,11 +71,11 @@ class AlertJobNumberRepository @Inject()(
     IndexModel(hashed("jobNumber"), IndexOptions().background(true).name("jobNumberIdx"))
   )) {
 
-  def update(lastJobNumber: LastJobNumber): Future[Unit] =
+  def update(jenkinsJobNumber: Int): Future[Unit] =
     collection
       .replaceOne(
         filter      = exists("jobNumber"),
-        replacement = lastJobNumber,
+        replacement = LastJobNumber(jenkinsJobNumber),
         options     = new ReplaceOptions().upsert(true)
       )
       .toFuture()
