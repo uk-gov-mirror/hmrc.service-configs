@@ -30,25 +30,34 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 
-class JenkinsConnector @Inject() (config: JenkinsConfig, ws: WSClient) {
+class JenkinsConnector @Inject()(config: JenkinsConfig, ws: WSClient)(implicit ec: ExecutionContext,
+materializer: Materializer) {
 
-  def getZip(baseUrl: String)(implicit ec: ExecutionContext,
-                              materializer: Materializer): Future[InputStream] = {
-
-
+  def getSensuZip(): Future[InputStream] = {
     ws
-      .url("https://orchestrator.tools.production.tax.service.gov.uk/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip")
+      .url(s"${config.orchestratorUrl}/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip")
       .withMethod("GET")
       .withAuth(config.username, config.token, WSAuthScheme.BASIC)
       .withRequestTimeout(Duration.Inf)
       .stream
       .map(_.bodyAsSource.async.runWith(StreamConverters.asInputStream(readTimeout = 20.seconds)))
-
-
   }
 
-  def getLatestJob(): Future[Option[Int]] = ???
+  def getLatestJob(): Future[Option[Int]] = {
+    ws
+      .url(s"${config.orchestratorUrl}/job/seed-service-sensu-alerts/api/json?depth=1&tree=lastCompletedBuild[number]")
+      .withMethod("GET")
+      .withAuth(config.username, config.token, WSAuthScheme.BASIC)
+      .withRequestTimeout(Duration.Inf)
+      .get()
+      .map { response => (response.json \ "lastCompletedBuild" \ "number").toOption.map(_.as[Int])
+    }
+  }
 }
+
+//val futureResult: Future[String] = ws.url(url).get().map { response =>
+//(response.json \ "person" \ "name").as[String]
+
 
   // https://orchestrator.tools.production.tax.service.gov.uk/job/seed-service-sensu-alerts/ws/target/output/*zip*/output.zip
 

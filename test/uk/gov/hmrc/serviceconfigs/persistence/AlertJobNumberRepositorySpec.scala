@@ -46,8 +46,8 @@ class AlertJobNumberRepositorySpec
 
     "update correctly" in {
 
-      val lastJobNumber = LastJobNumber(1)
-      val latestJobNumber = LastJobNumber(2)
+      val lastJobNumber = 1
+      val latestJobNumber = 2
 
       // todo: fix this
 

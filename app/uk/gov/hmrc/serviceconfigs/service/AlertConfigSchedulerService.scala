@@ -33,24 +33,24 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: AlertEnvironmentHandlerRepository,
                                              alertJobNumberRepository: AlertJobNumberRepository,
-                                             jenkinsConnector: JenkinsConnector)(implicit val ec : ExecutionContext,
-                                                                                 materializer: Materializer) {
+                                             jenkinsConnector: JenkinsConnector)(implicit val ec : ExecutionContext) {
 
   def updateConfigs(): Future[Unit] = {
+
 
     (for {
       jenkinsJobNumber  <- jenkinsConnector.getLatestJob().map(x => x.getOrElse(0))
       lastJobNumber     <- alertJobNumberRepository.findOne().map(x => x.getOrElse(LastJobNumber(0)).jobNumber)
       maybeJobNumber    =  if (jenkinsJobNumber > lastJobNumber) Option(jenkinsJobNumber) else None
     } yield maybeJobNumber).map {
-      case Some(value) =>
+      case Some(jobNumber) =>
         for {
-          zip           <- jenkinsConnector.getZip("url")
+          zip           <- jenkinsConnector.getSensuZip()
           sensuConfig   = processZip(zip)
           alertHandlers = processSensuConfig(sensuConfig)
-        } yield alertHandlers.foreach(alertEnvironmentHandlerRepository.insert)
-
-        alertJobNumberRepository.update(value)
+          _             <- alertEnvironmentHandlerRepository.insert(alertHandlers)
+          ok            <- alertJobNumberRepository.update(jobNumber)
+        } yield ok
 
       case None => Future.successful(())
     }
@@ -95,7 +95,6 @@ class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: 
      */
 
     Future.successful(()=>())
-  }
 
 }
 
@@ -127,6 +126,7 @@ object AlertConfigSchedulerService {
 
   class NonClosableInputStream(inputStream: ZipInputStream) extends FilterInputStream(inputStream) {
     override def close(): Unit = {
+      println("TEST")
       inputStream.closeEntry()
     }
   }
@@ -138,15 +138,17 @@ object AlertConfigSchedulerService {
     Iterator.continually(zip.getNextEntry)
       .takeWhile(z => z != null)
       .foldLeft(SensuConfig())((config, entry) => {
+        println(entry.getName + "@@@@")
       entry.getName match {
-        case p if p.startsWith("output/configs/")   => {
-          println("processing: CONFIG")
-          implicit val reads = AlertConfig.formats
-          val newConfig = config.copy(alertConfigs = config.alertConfigs :+ Json.parse(new NonClosableInputStream(zip)).as[AlertConfig])
-          println(newConfig)
-          newConfig
+        case p if p.startsWith("output/configs/") && p.endsWith(".json")   => {
+            println("processing: CONFIG" + p)
+            implicit val reads = AlertConfig.formats
+            val json = Json.parse(new NonClosableInputStream(zip))
+            println(json + "!!!!!!!")
+            val newConfig = config.copy(alertConfigs = config.alertConfigs :+ json.as[AlertConfig])
+            newConfig
         }
-        case p if p.startsWith("output/handlers/aws_production")  => {
+        case p if p.startsWith("output/handlers/aws_production") && p.endsWith(".json")  => {
           println("processing: HANDLER")
           implicit val reads = Handler.formats
           config.copy(productionHandler = (Json.parse(new NonClosableInputStream(zip)) \ "handlers").as[Map[String, Handler]])
@@ -175,9 +177,9 @@ object AlertConfigSchedulerService {
   }
 
 
-  val fis = new FileInputStream("/Users/samhmrcdigital/Downloads/sensuConfig.zip")
-  println(SensuConfig)
-  println(processSensuConfig(processZip(fis)))
+//  val fis = new FileInputStream("/Users/samhmrcdigital/Downloads/sensuConfig.zip")
+//  println(SensuConfig)
+//  println(processSensuConfig(processZip(fis)))
 }
 
 

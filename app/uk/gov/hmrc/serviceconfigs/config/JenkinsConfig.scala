@@ -21,6 +21,9 @@ import play.api.Configuration
 
 class JenkinsConfig @Inject() (config: Configuration) {
 
+  lazy val orchestratorUrl: String  = "https://orchestrator.tools.production.tax.service.gov.uk"
+  lazy val buildUrl: String         = "https://build.tax.service.gov.uk"
+
   lazy val username: String    = config.get[String]("jenkins.username")
   lazy val token: String       = config.get[String]("jenkins.token")
   lazy val jenkinsHost: String = config.get[String]("jenkins.host")

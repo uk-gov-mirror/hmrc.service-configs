@@ -70,7 +70,7 @@ class AlertConfigIntegrationSpec
       val testData = Seq(AlertEnvironmentHandler("testNameTwo", true),
         AlertEnvironmentHandler("testNameOne", true))
 
-      testData.foreach(repository.insert)
+      repository.insert(testData)
 
       val expectedResultOne = """{"serviceName":"testNameOne","production":true}"""
       val expectedResultTwo = """{"serviceName":"testNameTwo","production":true}"""
@@ -90,7 +90,7 @@ class AlertConfigIntegrationSpec
       val testData = Seq(AlertEnvironmentHandler("testNameOne", true),
         AlertEnvironmentHandler("testNameTwo", true))
 
-      testData.foreach(repository.insert)
+      repository.insert(testData)
 
       val expectedResult = """{"serviceName":"testNameOne","production":true}"""
 
@@ -108,7 +108,7 @@ class AlertConfigIntegrationSpec
       val testData = Seq(AlertEnvironmentHandler("testNameOne", true),
         AlertEnvironmentHandler("testNameTwo", true))
 
-      testData.foreach(repository.insert)
+      repository.insert(testData)
 
       eventually {
         val response =  ws.url(s"http://localhost:$port/service-configs/alert-configs/testNameNonExisting").get.futureValue

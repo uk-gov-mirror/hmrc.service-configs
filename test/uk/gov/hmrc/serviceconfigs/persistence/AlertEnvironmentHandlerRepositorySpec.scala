@@ -49,7 +49,7 @@ class AlertEnvironmentHandlerRepositorySpec
       val alertEnvironmentHandler = AlertEnvironmentHandler("testName", true)
 
       eventually {
-        repository.insert(alertEnvironmentHandler)
+        repository.insert(Seq(alertEnvironmentHandler))
         repository.findAll().futureValue must contain(alertEnvironmentHandler)
       }
     }
@@ -62,7 +62,7 @@ class AlertEnvironmentHandlerRepositorySpec
       val expectedResult = Option(AlertEnvironmentHandler("testNameOne", true))
 
       eventually {
-        alertEnvironmentHandlers.foreach(repository.insert)
+        repository.insert(alertEnvironmentHandlers)
         repository.findOne("testNameOne").futureValue mustBe expectedResult
       }
     }

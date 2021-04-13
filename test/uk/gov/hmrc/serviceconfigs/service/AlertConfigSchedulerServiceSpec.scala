@@ -1,24 +1,75 @@
 package uk.gov.hmrc.serviceconfigs.service
 
+import akka.actor.ActorSystem
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.hmrc.serviceconfigs.connector.JenkinsConnector
 import uk.gov.hmrc.serviceconfigs.model.AlertEnvironmentHandler
+import uk.gov.hmrc.serviceconfigs.config.JenkinsConfig
+import akka.stream.Materializer
+import play.api.libs.ws.ahc.AhcWSClient
+import play.libs.ws.WSClient
+import uk.gov.hmrc.serviceconfigs.persistence.{AlertEnvironmentHandlerRepository, AlertJobNumberRepository}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.FileInputStream
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 class AlertConfigSchedulerServiceSpec extends AnyWordSpec with Matchers
   with ScalaFutures with MockitoSugar {
 
+
+
+  private val mockAlertJobNumberRepository: AlertJobNumberRepository = mock[AlertJobNumberRepository]
+  private val mockAlertEnvironmentHandlerRepository: AlertEnvironmentHandlerRepository = mock[AlertEnvironmentHandlerRepository]
+  private val mockJenkinsConnector: JenkinsConnector = mock[JenkinsConnector]
+
+
+  "AlertConfigSchedulerService.updateConfigs" should {
+    "update configs when run for the first time" in {
+
+      val fis = new FileInputStream("./test/resources/happy-output.zip")
+
+
+
+      val alertConfigSchedulerService: AlertConfigSchedulerService = new AlertConfigSchedulerService(mockAlertEnvironmentHandlerRepository, mockAlertJobNumberRepository, mockJenkinsConnector)
+
+      when(mockJenkinsConnector.getLatestJob()).thenReturn(Future.successful(Some(1)))
+      when(mockAlertJobNumberRepository.findOne()).thenReturn(Future.successful(None))
+      when(mockJenkinsConnector.getSensuZip()).thenReturn(Future.successful(fis))
+      when(mockAlertEnvironmentHandlerRepository.insert(any[Seq[AlertEnvironmentHandler]])).thenReturn(Future.successful())
+      when(mockAlertJobNumberRepository.update(eqTo(1))).thenReturn(Future.successful())
+
+      Await.result( alertConfigSchedulerService.updateConfigs(), Duration.Inf)
+    }
+
+
+//    "Return Indicator with NoReadme result when no readme found" in {
+//      when(mockGithubConnector.findReadMe("foo")).thenReturn(Future.successful(None))
+//
+//      val result = rater.rate("foo")
+//
+//      result.futureValue mustBe Indicator(ReadMeIndicatorType, Seq(Result(NoReadme, "No Readme defined", None)))
+//    }
+
+  }
+
   "AlertConfigSchedulerService.processZip" should {
     "iterate through files in zip with an input stream and produce a valid SensuConfig" in {
 
-      val fis = new FileInputStream("./test/resources/outputOG.zip")
+      val fis = new FileInputStream("./test/resources/happy-output.zip")
       val file = AlertConfigSchedulerService.processZip(fis)
 
-      file shouldBe SensuConfig
+      file.alertConfigs.exists(_.app == "accessibility-statement-frontend.public.mdtp") shouldBe true
+      file.alertConfigs.exists(_.app == "add-taxes-frontend.public.mdtp") shouldBe true
+
+      file.productionHandler.get("yta") shouldBe Some(Handler("/etc/sensu/handlers/hmrc_pagerduty_multiteam_env_apiv2.rb --team yta -e aws_production"))
+      file.productionHandler.get("platform-ui") shouldBe Some(Handler("/etc/sensu/handlers/hmrc_pagerduty_multiteam_env_apiv2.rb --team platform-ui -e aws_production"))
     }
+
   }
 
   "AlertConfigSchedulerService.processSensuConfig" should {

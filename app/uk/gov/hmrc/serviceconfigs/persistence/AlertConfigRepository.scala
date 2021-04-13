@@ -40,10 +40,10 @@ class AlertEnvironmentHandlerRepository @Inject()(
   )
 ) {
 
-  def insert(alertEnvironmentHandler: AlertEnvironmentHandler): Future[Unit] =
+  def insert(alertEnvironmentHandlers: Seq[AlertEnvironmentHandler]): Future[Unit] =
     collection.
-      insertOne(
-        alertEnvironmentHandler
+      insertMany(
+        alertEnvironmentHandlers
       )
       .toFuture()
       .map(_ => ())

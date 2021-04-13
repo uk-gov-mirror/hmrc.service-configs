@@ -14,42 +14,39 @@
  * limitations under the License.
  */
 
-//package uk.gov.hmrc.serviceconfigs.scheduler
-//
-//import akka.actor.ActorSystem
-//import play.api.Logger
-//import play.api.inject.ApplicationLifecycle
-//import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
-//import uk.gov.hmrc.serviceconfigs.config.SchedulerConfigs
-//import uk.gov.hmrc.serviceconfigs.service.AlertConfigService
-//
-//import javax.inject.Inject
-//import scala.concurrent.ExecutionContext
-//import scala.concurrent.duration.DurationInt
-//
-//class AlertConfigScheduler @Inject() (
-//                                       schedulerConfigs   : SchedulerConfigs,
-//                                       mongoLockRepository: MongoLockRepository,
-//                                       alertConfigService: AlertConfigService
-//                                     ) (implicit
-//                                        actorSystem         : ActorSystem,
-//                                        applicationLifecycle: ApplicationLifecycle,
-//                                        ec                  : ExecutionContext
-//) extends SchedulerUtils {
-//
-//  private val logger                     = Logger(this.getClass)
-//
-//  scheduleWithLock(
-//    label = "alertConfigReloader",
-//    schedulerConfig = schedulerConfigs.alertConfigUpdate,
-//    lock = LockService(mongoLockRepository, "alert-config-scheduler", 20.minutes)) {
-//    alertConfigService.updateConfigs
-//      .recover {
-//        case e: Throwable => logger.error("Error inserting Repo Ratings", e)
-//      }
-//      .map(_ => logger.info("Finished inserting Repo Ratings"))
-//  }
-//
-//
-//
-//}
+package uk.gov.hmrc.serviceconfigs.scheduler
+
+import akka.actor.ActorSystem
+import play.api.Logger
+import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
+import uk.gov.hmrc.serviceconfigs.config.SchedulerConfigs
+import uk.gov.hmrc.serviceconfigs.service.{AlertConfigSchedulerService}
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+
+class AlertConfigScheduler @Inject() (
+                                       schedulerConfigs   : SchedulerConfigs,
+                                       mongoLockRepository: MongoLockRepository,
+                                       alertConfigSchedulerService: AlertConfigSchedulerService
+                                     ) (implicit
+                                        actorSystem         : ActorSystem,
+                                        applicationLifecycle: ApplicationLifecycle,
+                                        ec                  : ExecutionContext
+) extends SchedulerUtils {
+  
+  scheduleWithLock(
+    label = "alertConfigReloader",
+    schedulerConfig = schedulerConfigs.alertConfigUpdate,
+    lock = LockService(mongoLockRepository, "alert-config-scheduler", 20.minutes)) {
+    alertConfigSchedulerService.updateConfigs
+      .recover {
+        case e: Throwable => logger.error("Error inserting Alert Handlers", e)
+      }
+      .map(_ => logger.info("Finished inserting Alert Handlers"))
+  }
+
+
+
+}
