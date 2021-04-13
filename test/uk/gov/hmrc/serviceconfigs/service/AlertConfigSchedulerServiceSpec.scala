@@ -27,23 +27,25 @@ class AlertConfigSchedulerServiceSpec extends AnyWordSpec with Matchers
   private val mockAlertEnvironmentHandlerRepository: AlertEnvironmentHandlerRepository = mock[AlertEnvironmentHandlerRepository]
   private val mockJenkinsConnector: JenkinsConnector = mock[JenkinsConnector]
 
+  private val alertConfigSchedulerService: AlertConfigSchedulerService = new AlertConfigSchedulerService(mockAlertEnvironmentHandlerRepository, mockAlertJobNumberRepository, mockJenkinsConnector)
 
   "AlertConfigSchedulerService.updateConfigs" should {
     "update configs when run for the first time" in {
 
-      val fis = new FileInputStream("./test/resources/happy-output.zip")
-
-
-
-      val alertConfigSchedulerService: AlertConfigSchedulerService = new AlertConfigSchedulerService(mockAlertEnvironmentHandlerRepository, mockAlertJobNumberRepository, mockJenkinsConnector)
-
+      val res = this.getClass.getResource("/output.zip")
       when(mockJenkinsConnector.getLatestJob()).thenReturn(Future.successful(Some(1)))
       when(mockAlertJobNumberRepository.findOne()).thenReturn(Future.successful(None))
-      when(mockJenkinsConnector.getSensuZip()).thenReturn(Future.successful(fis))
+      when(mockJenkinsConnector.getSensuZip()).thenReturn( Future.successful(res.openStream()))
       when(mockAlertEnvironmentHandlerRepository.insert(any[Seq[AlertEnvironmentHandler]])).thenReturn(Future.successful())
       when(mockAlertJobNumberRepository.update(eqTo(1))).thenReturn(Future.successful())
 
-      Await.result( alertConfigSchedulerService.updateConfigs(), Duration.Inf)
+
+      val result = Await.ready(alertConfigSchedulerService.updateConfigs(), Duration(20, "seconds"))
+
+      verify(mockAlertEnvironmentHandlerRepository, times(1)).insert(any[Seq[AlertEnvironmentHandler]])
+      verify(mockAlertJobNumberRepository, times(1)).update(eqTo(1))
+
+      result.value.get.isSuccess shouldBe true
     }
 
 

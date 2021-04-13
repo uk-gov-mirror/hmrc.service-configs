@@ -37,12 +37,11 @@ class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: 
 
   def updateConfigs(): Future[Unit] = {
 
-
     (for {
       jenkinsJobNumber  <- jenkinsConnector.getLatestJob().map(x => x.getOrElse(0))
       lastJobNumber     <- alertJobNumberRepository.findOne().map(x => x.getOrElse(LastJobNumber(0)).jobNumber)
       maybeJobNumber    =  if (jenkinsJobNumber > lastJobNumber) Option(jenkinsJobNumber) else None
-    } yield maybeJobNumber).map {
+    } yield maybeJobNumber).flatMap {
       case Some(jobNumber) =>
         for {
           zip           <- jenkinsConnector.getSensuZip()
@@ -54,9 +53,8 @@ class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: 
 
       case None => Future.successful(())
     }
+
   }
-
-
 
 
     /*
@@ -94,8 +92,6 @@ class AlertConfigSchedulerService @Inject() (alertEnvironmentHandlerRepository: 
         -- end .
      */
 
-    Future.successful(()=>())
-
 }
 
 case class AlertConfig(
@@ -126,35 +122,31 @@ object AlertConfigSchedulerService {
 
   class NonClosableInputStream(inputStream: ZipInputStream) extends FilterInputStream(inputStream) {
     override def close(): Unit = {
-      println("TEST")
       inputStream.closeEntry()
     }
   }
 
   def processZip(inputStream: InputStream): SensuConfig = {
 
+    implicit val alertsReads = AlertConfig.formats
+    implicit val handlerReads = Handler.formats
+
     val zip = new ZipInputStream(inputStream)
 
     Iterator.continually(zip.getNextEntry)
       .takeWhile(z => z != null)
       .foldLeft(SensuConfig())((config, entry) => {
-        println(entry.getName + "@@@@")
-      entry.getName match {
-        case p if p.startsWith("output/configs/") && p.endsWith(".json")   => {
-            println("processing: CONFIG" + p)
-            implicit val reads = AlertConfig.formats
-            val json = Json.parse(new NonClosableInputStream(zip))
-            println(json + "!!!!!!!")
-            val newConfig = config.copy(alertConfigs = config.alertConfigs :+ json.as[AlertConfig])
-            newConfig
+        entry.getName match {
+          case p if p.startsWith("output/configs/") && p.endsWith(".json")   => {
+              val json = Json.parse(new NonClosableInputStream(zip))
+              val newConfig = config.copy(alertConfigs = config.alertConfigs :+ json.as[AlertConfig])
+              newConfig
+          }
+          case p if p.startsWith("output/handlers/aws_production") && p.endsWith(".json")  => {
+            config.copy(productionHandler = (Json.parse(new NonClosableInputStream(zip)) \ "handlers").as[Map[String, Handler]])
+          }
+          case _ => config
         }
-        case p if p.startsWith("output/handlers/aws_production") && p.endsWith(".json")  => {
-          println("processing: HANDLER")
-          implicit val reads = Handler.formats
-          config.copy(productionHandler = (Json.parse(new NonClosableInputStream(zip)) \ "handlers").as[Map[String, Handler]])
-        }
-        case _ => config
-      }
     })
   }
 
