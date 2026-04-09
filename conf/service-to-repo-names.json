@@ -63,7 +63,7 @@
     "serviceName": "sa-filing-2122-helpdesk",
     "artefactName": "sa-filing-2122-helpdesk",
     "repoName": "sa-filing-2122",
-    "disabled": false
+    "disabled": true
   },
   {
     "serviceName": "paye-core-helpdesk",
