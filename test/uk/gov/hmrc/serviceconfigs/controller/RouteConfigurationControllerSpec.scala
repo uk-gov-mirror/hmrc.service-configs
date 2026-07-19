@@ -72,7 +72,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-admin-link",
           "isRegex": false,
           "routeType": "adminfrontend",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -80,7 +81,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-admin-link",
           "isRegex": false,
           "routeType": "adminfrontend",
-          "environment": "qa"
+          "environment": "qa",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -88,7 +90,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-frontend-link",
           "isRegex": false,
           "routeType": "frontend",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -96,7 +99,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-frontend-link",
           "isRegex": false,
           "routeType": "frontend",
-          "environment": "qa"
+          "environment": "qa",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -104,7 +108,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-devhub-link",
           "isRegex": false,
           "routeType": "devhub",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         }
       ]""")
 
@@ -146,7 +151,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-admin-link",
           "isRegex": false,
           "routeType": "adminfrontend",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -154,7 +160,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-frontend-link",
           "isRegex": false,
           "routeType": "frontend",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -162,7 +169,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-devhub-link",
           "isRegex": false,
           "routeType": "devhub",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         }
       ]""")
 
@@ -195,7 +203,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-admin-link",
           "isRegex": false,
           "routeType": "adminfrontend",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         },
         {
           "serviceName": "service1",
@@ -203,7 +212,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-admin-link",
           "isRegex": false,
           "routeType": "adminfrontend",
-          "environment": "qa"
+          "environment": "qa",
+          "redirection": false
         }
       ]"""
       )
@@ -238,7 +248,8 @@ class RouteConfigurationControllerSpec
             "ruleConfigurationUrl": "github-frontend-link",
             "isRegex": false,
             "routeType": "frontend",
-            "environment": "production"
+            "environment": "production",
+          "redirection": false
           }
         ]"""
       )
@@ -273,7 +284,8 @@ class RouteConfigurationControllerSpec
           "ruleConfigurationUrl": "github-devhub-link",
           "isRegex": false,
           "routeType": "devhub",
-          "environment": "production"
+          "environment": "production",
+          "redirection": false
         }
       ]"""
       )
@@ -362,7 +374,7 @@ class RouteConfigurationControllerSpec
                 backendPath          = "path",
                 environment          = Environment.Production,
                 routesFile           = "",
-                ruleConfigurationUrl = "github-frontend-link",
+                ruleConfigurationUrl = "github-frontend-link"
               ),
               MongoFrontendRoute(
                 service              = ServiceName("service-1"),
@@ -393,7 +405,8 @@ class RouteConfigurationControllerSpec
             "ruleConfigurationUrl": "github-frontend-link",
             "isRegex": false,
             "routeType": "frontend",
-            "environment": "production"
+            "environment": "production",
+            "redirection": false
           },
           {
             "serviceName": "service-1",
@@ -401,7 +414,8 @@ class RouteConfigurationControllerSpec
             "ruleConfigurationUrl": "github-frontend-link",
             "isRegex": false,
             "routeType": "frontend",
-            "environment": "production"
+            "environment": "production",
+            "redirection": false
           },
           {
             "serviceName": "service-1",
@@ -409,7 +423,83 @@ class RouteConfigurationControllerSpec
             "ruleConfigurationUrl": "github-frontend-link",
             "isRegex": true,
             "routeType": "frontend",
-            "environment": "production"
+            "environment": "production",
+            "redirection": false
+          }
+        ]"""
+      )
+    
+    "handle redirections" in new Setup:
+      val foo = "/foo"
+      val newFoo = "/new-foo"
+      when(mockFrontendRouteRepository.searchByFrontendPath(foo, None))
+        .thenReturn(
+          Future.successful(
+            Seq(
+              MongoFrontendRoute(
+                service              = ServiceName("redirects"),
+                frontendPath         = "/foo",
+                backendPath          = "path",
+                environment          = Environment.Production,
+                routesFile           = "",
+                ruleConfigurationUrl = "github-frontend-link",
+                redirectTo           = Some("/new-foo")
+              ),
+              MongoFrontendRoute(
+                service              = ServiceName("service-1"),
+                frontendPath         = "/foo/bar",
+                backendPath          = "path",
+                environment          = Environment.Production,
+                routesFile           = "",
+                ruleConfigurationUrl = "github-frontend-link"
+              )
+            )
+          )
+        )
+
+      when(mockFrontendRouteRepository.searchByFrontendPath(newFoo, None))
+        .thenReturn(
+          Future.successful(
+            Seq(
+              MongoFrontendRoute(
+                service              = ServiceName("service-2"),
+                frontendPath         = "/new-foo",
+                backendPath          = "path",
+                environment          = Environment.Production,
+                routesFile           = "",
+                ruleConfigurationUrl = "github-frontend-link"
+              )
+            )
+          )
+        )
+
+      val result =
+        call(
+          controller.searchByFrontendPath(foo, None),
+          FakeRequest(GET, s"/frontend-routes/search?frontendPath=$foo")
+        )
+
+      status(result) shouldBe 200
+
+      contentAsJson(result) shouldBe Json.parse("""
+        [
+          {
+            "serviceName": "service-2",
+            "path": "/new-foo",
+            "ruleConfigurationUrl": "github-frontend-link",
+            "isRegex": false,
+            "routeType": "frontend",
+            "environment": "production",
+            "redirection": true
+          },
+          {
+            "serviceName": "service-1",
+            "path": "/foo/bar",
+            "ruleConfigurationUrl": "github-frontend-link",
+            "isRegex": false,
+            "routeType": "frontend",
+            "environment": "production",
+            "redirection": false
           }
         ]"""
       )

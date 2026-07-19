@@ -30,13 +30,15 @@ object YamlConfigParser:
 
   private final case class LocationConfig(
     path        : String,
-    shutterable : Boolean
+    shutterable : Boolean,
+    redirectTo : Option[String]
   )
 
   private object LocationConfig:
     val reads: Reads[LocationConfig] =
       ( (__ \ "path"       ).read[String]
       ~ (__ \ "shutterable").readWithDefault[Boolean](true)
+      ~ (__ \ "redirect-to").readNullable[String]
       )(apply _)
 
   private final case class YamlConfig(
@@ -104,7 +106,8 @@ class YamlConfigParser @Inject()(nginxConfig: NginxConfig):
                                  )).filter(_ => loc.shutterable),
           ruleConfigurationUrl = s"${config.blobUrl}#L${lines.indexWhere(_.contains(s"${conf.service}:")) + 1}",
           isRegex              = isRegex(loc.path), // https://nginx.org/en/docs/http/ngx_http_core_module.html#location
-          isDevhub             = config.isDevhub
+          isDevhub             = config.isDevhub,
+          redirectTo           = loc.redirectTo
         )
       ).toSet
 
