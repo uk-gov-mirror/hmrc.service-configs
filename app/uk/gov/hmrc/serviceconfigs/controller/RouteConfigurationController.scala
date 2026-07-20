@@ -90,9 +90,27 @@ class RouteConfigurationController @Inject()(
   ): Action[AnyContent] =
     Action.async:
       frontendRouteRepository.searchByFrontendPath(frontendPath, environment)
-        .map(_.map(Route.fromMongo))
-        .map(Json.toJson(_))
-        .map(Ok(_))
+      .flatMap: routes =>
+        val redirects = routes.filter(_.service.asString == "redirects")
+        val filteredRoutes = routes.diff(redirects)
+
+        if redirects.isEmpty then Future.successful(filteredRoutes)
+        else
+          Future
+            .sequence(
+              redirects.flatMap(_.redirectTo).map: redirectPath =>
+                frontendRouteRepository.searchByFrontendPath(redirectPath, environment)
+                .map(_.headOption.toList.map: route =>
+                  val redirectedRoute = route.copy(redirectTo = Some("defined"))
+                  if route.frontendPath == redirectPath then redirectedRoute
+                  else redirectedRoute.copy(frontendPath = redirectPath)
+                )
+            )
+          .map(_.flatten ++ filteredRoutes)
+
+      .map(_.map(Route.fromMongo))
+      .map(Json.toJson(_))
+      .map(Ok(_))
 
   def shutteringRoutes(environment: Environment): Action[AnyContent] =
     given Writes[ShutteringRoutes] = ShutteringRoutes.writes

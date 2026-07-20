@@ -106,6 +106,7 @@ case class Route(
 , isRegex             : Boolean = false
 , routeType           : RouteType
 , environment         : Environment
+, redirection         : Boolean = false
 )
 
 object Route:
@@ -116,6 +117,7 @@ object Route:
     ~ (__ \ "isRegex"             ).write[Boolean]
     ~ (__ \ "routeType"           ).write[RouteType](RouteType.writes)
     ~ (__ \ "environment"         ).write[Environment](Environment.format)
+    ~ (__ \ "redirection"         ).write[Boolean]
     )(r => Tuple.fromProductTyped(r))
 
   def fromMongo(mfr: MongoFrontendRoute): Route =
@@ -125,5 +127,6 @@ object Route:
       ruleConfigurationUrl = Some(mfr.ruleConfigurationUrl),
       isRegex              = mfr.isRegex,
       routeType            = if mfr.isDevhub then RouteType.Devhub else RouteType.Frontend,
-      environment          = mfr.environment
+      environment          = mfr.environment,
+      redirection          = mfr.redirectTo.isDefined
     )
