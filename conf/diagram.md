@@ -228,8 +228,6 @@ sequenceDiagram
 
 ### Collection: `appliedConfig`
 Description: Stores the final effective config values per service key across environments. Used by `GET /config-by-env/:serviceName` to return what config a service is actually running with.
-**Access:** read-write
-**Evidence:** `app/uk/gov/hmrc/serviceconfigs/persistence/AppliedConfigRepository.scala:38`; `AppliedConfigRepository.scala:139-167`
 
 ```json
 {
@@ -250,8 +248,6 @@ Description: Stores the final effective config values per service key across env
 
 ### Collection: `deployedConfig`
 Description: Records the app-config file content that was active at the point a deployment happened. Used to detect config changes between deployments.
-Access: read-write 
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeployedConfigRepository.scala:86`; `DeployedConfigRepository.scala:99-108`
 
 ```json
 {
@@ -270,8 +266,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeployedConfigRepository.s
 
 ### Collection: `deploymentConfig`
 Description: Stores non-app deployment settings such as capacity, zone, environment variables and JVM options per service and environment. Sourced from app-config-env files.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeploymentConfigRepository.scala:35`; `app/uk/gov/hmrc/serviceconfigs/model/DeploymentConfig.scala:44-55`
 
 ```json
 {
@@ -292,8 +286,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeploymentConfigRepository
 
 ### Collection: `deploymentEvents`
 Description: Audit record of each processed deployment event. Used to track what version was deployed where and whether config changed.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeploymentEventRepository.scala:128`; `DeploymentEventRepository.scala:153-162`
 
 ```json
 {
@@ -312,8 +304,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DeploymentEventRepository.
 
 ### Collection: `slugConfigurations`
 Description: System-of-record for each published slug. Stores artifact metadata, embedded config files, and dependency list. Used to answer what is deployed and to compose effective config.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/SlugInfoRepository.scala:204`; `app/uk/gov/hmrc/serviceconfigs/model/SlugInfo.scala:76-91`
 
 ```json
 {
@@ -335,8 +325,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/SlugInfoRepository.scala:2
 
 ### Collection: `dependencyConfigs`
 Description: Stores config fragments bundled with specific dependency versions. Used during config composition to include dependency-level defaults.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DependencyConfigRepository.scala:35`; `app/uk/gov/hmrc/serviceconfigs/model/SlugInfo.scala:93-102`
 
 ```json
 {
@@ -351,8 +339,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/DependencyConfigRepository
 
 ### Collection: `resourceUsage`
 Description: Time-series snapshots of slot and instance counts per service and environment. Has a 7-year TTL. Used for resource usage reporting and trending.
-Access: read-write 
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/ResourceUsageRepository.scala:43`; `app/uk/gov/hmrc/serviceconfigs/model/ResourceUsage.scala:45-53`
 
 ```json
 {
@@ -370,8 +356,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/ResourceUsageRepository.sc
 
 ### Collection: `lastHashString`
 Description: Tracks the last known git hash for each config source repo. Prevents redundant re-processing when nothing has changed.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/LastHashRepository.scala:37`; `app/uk/gov/hmrc/serviceconfigs/model/LastHash.scala:25-28`
 
 ```json
 {
@@ -384,8 +368,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/LastHashRepository.scala:3
 
 ### Collection: `latestConfig`
 Description: Caches the latest (HEAD) content of config files per repo. Used to avoid re-fetching unchanged files from GitHub.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/LatestConfigRepository.scala:95`; `LatestConfigRepository.scala:103-107`
 
 ```json
 {
@@ -399,8 +381,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/LatestConfigRepository.sca
 
 ### Collection: `alertEnvironmentHandlers`
 Description: Stores which environments a service has alert handlers configured for. Refreshed by the scheduled config sync job.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/AlertConfigRepository.scala:34`; `app/uk/gov/hmrc/serviceconfigs/model/AlertEnvironmentHandler.scala:29-34`
 
 ```json
 {
@@ -414,8 +394,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/AlertConfigRepository.scal
 
 ### Collection: `internalAuthConfig`
 Description: Stores internal-auth grant configuration per service and environment. Refreshed by the scheduled config sync job.
-Access: read-write 
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/InternalAuthConfigRepository.scala:35`; `app/uk/gov/hmrc/serviceconfigs/model/InternalAuthConfig.scala:42-46`
 
 ```json
 {
@@ -429,8 +407,6 @@ Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/InternalAuthConfigReposito
 
 ### Collection: `upscanConfig`
 Description: Stores Upscan file upload service configuration per service and environment. Refreshed by the scheduled config sync job.
-Access: read-write
-Evidence: `app/uk/gov/hmrc/serviceconfigs/persistence/UpscanConfigRepository.scala:36`; `app/uk/gov/hmrc/serviceconfigs/model/UpscanConfig.scala:29-33`
 
 ```json
 {
